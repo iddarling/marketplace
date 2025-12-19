@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Профиль - Marketplace</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .profile-container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+        
+        .profile-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .profile-info {
+            margin-bottom: 2rem;
+        }
+        
+        .profile-info p {
+            margin: 0.75rem 0;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .profile-info p:last-child {
+            border-bottom: none;
+        }
+        
+        .orders-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .order-card {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #2563eb;
+        }
+        
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .order-number {
+            font-weight: bold;
+            color: #2563eb;
+            font-size: 1.1rem;
+        }
+        
+        .order-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .status-processing {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-delivered {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .order-total {
+            font-weight: bold;
+            text-align: right;
+            margin-top: 1rem;
+            color: #111827;
+        }
+        
+        @media (max-width: 768px) {
+            .profile-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="/" class="logo">Marketplace</a>
+                <div class="nav">
+                    <a href="/" class="nav-link">Главная</a>
+                    <a href="/cart" class="nav-link">Корзина</a>
+                    <button class="logout-btn btn btn-secondary">Выйти</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <h1 style="margin: 2rem 0;">Мой профиль</h1>
+        
+        <div id="loading" style="text-align: center; padding: 3rem;">
+            <p>Загрузка профиля...</p>
+        </div>
+        
+        <div id="profileContent" style="display: none;">
+            <div class="profile-container">
+                <div class="profile-card">
+                    <h2 style="margin-bottom: 1.5rem;">Личные данные</h2>
+                    <div class="profile-info" id="userInfo">
+                        <!-- Данные пользователя будут здесь -->
+                    </div>
+                    <a href="/" class="btn" style="width: 100%;">Вернуться к покупкам</a>
+                </div>
+                
+                <div class="orders-section">
+                    <h2 style="margin-bottom: 1.5rem;">Мои заказы</h2>
+                    <div id="ordersList">
+                        <!-- Заказы будут здесь -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="errorMessage" style="display: none; text-align: center; padding: 3rem;">
+            <p style="color: #ef4444;">Ошибка загрузки профиля</p>
+            <a href="/login" class="btn" style="margin-top: 1rem;">Войти</a>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                console.log('🔍 Запрашиваем данные пользователя...');
+                const response = await fetch('/api/user');
+                
+                if (response.status === 401) {
+                    console.log('❌ Пользователь не авторизован, перенаправляем на логин');
+                    window.location.href = '/login';
+                    return;
+                }
+                
+                if (!response.ok) {
+                    throw new Error('Ошибка сервера: ' + response.status);
+                }
+                
+                const data = await response.json();
+                console.log('✅ Данные пользователя получены:', data);
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'Ошибка получения данных');
+                }
+                
+                const user = data.user;
+                
+                // Отображаем данные пользователя
+                document.getElementById('userInfo').innerHTML = `
+                    <p><strong>Имя:</strong> ${user.name || 'Не указано'}</p>
+                    <p><strong>Email:</strong> ${user.email || 'Не указан'}</p>
+                    <p><strong>Телефон:</strong> ${user.phone || 'Не указан'}</p>
+                    <p><strong>Адрес:</strong> ${user.address || 'Не указан'}</p>
+                    <p><strong>Дата регистрации:</strong> ${new Date(user.created_at).toLocaleDateString('ru-RU')}</p>
+                `;
+                
+                // Загружаем заказы
+                await loadOrders(user.id);
+                
+                // Показываем контент
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('profileContent').style.display = 'block';
+                
+            } catch (error) {
+                console.error('🔥 Ошибка загрузки профиля:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+            
+            // Выход из системы
+            document.querySelector('.logout-btn').addEventListener('click', async function() {
+                try {
+                    await fetch('/api/logout', { method: 'POST' });
+                    window.location.href = '/';
+                } catch (error) {
+                    alert('Ошибка при выходе');
+                }
+            });
+        });
+        
+        async function loadOrders(userId) {
+            try {
+                console.log('📦 Запрашиваем заказы пользователя...');
+                const response = await fetch('/api/orders/my');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.orders && data.orders.length > 0) {
+                        const ordersHtml = data.orders.map(order => {
+                            const statusClass = `status-${order.status}`;
+                            const statusText = {
+                                'processing': 'В обработке',
+                                'shipped': 'Отправлен',
+                                'delivered': 'Доставлен',
+                                'cancelled': 'Отменен'
+                            }[order.status] || order.status;
+                            
+                            const date = new Date(order.created_at).toLocaleDateString('ru-RU', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric'
+                            });
+                            
+                            return `
+                                <div class="order-card">
+                                    <div class="order-header">
+                                        <div class="order-number">Заказ №${order.order_number}</div>
+                                        <div class="order-status ${statusClass}">${statusText}</div>
+                                    </div>
+                                    <p><strong>Дата:</strong> ${date}</p>
+                                    <p><strong>Адрес доставки:</strong> ${order.customer_address}</p>
+                                    <p><strong>Телефон:</strong> ${order.customer_phone}</p>
+                                    <div class="order-total">
+                                        Итого: ${parseInt(order.total).toLocaleString()} ₽
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                        
+                        document.getElementById('ordersList').innerHTML = ordersHtml;
+                    } else {
+                        document.getElementById('ordersList').innerHTML = `
+                            <p style="text-align: center; color: #6b7280;">У вас пока нет заказов</p>
+                            <div style="text-align: center; margin-top: 1rem;">
+                                <a href="/" class="btn">Сделать первый заказ</a>
+                            </div>
+                        `;
+                    }
+                } else {
+                    document.getElementById('ordersList').innerHTML = `
+                        <p style="text-align: center; color: #ef4444;">Не удалось загрузить заказы</p>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('❌ Ошибка загрузки заказов:', error);
+                document.getElementById('ordersList').innerHTML = `
+                    <p style="text-align: center; color: #ef4444;">Ошибка загрузки заказов</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

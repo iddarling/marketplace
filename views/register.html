@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация - Marketplace</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="/" class="logo">Marketplace</a>
+                <div class="nav">
+                    <a href="/" class="nav-link">Главная</a>
+                    <a href="/cart" class="nav-link">Корзина</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="form-container">
+            <h1 class="form-title">Регистрация</h1>
+            
+            <form id="registerForm" class="auth-form">
+                <div class="form-group">
+                    <label class="form-label" for="name">Имя</label>
+                    <input type="text" id="name" name="name" class="form-input" required 
+                           placeholder="Иван Петров">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="email">Email</label>
+                    <input type="email" id="email" name="email" class="form-input" required 
+                           placeholder="user@example.com">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="phone">Телефон (необязательно)</label>
+                    <input type="tel" id="phone" name="phone" class="form-input" 
+                           placeholder="+7 (999) 123-45-67">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="password">Пароль</label>
+                    <input type="password" id="password" name="password" class="form-input" required 
+                           placeholder="Минимум 6 символов" minlength="6">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="confirmPassword">Подтвердите пароль</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" class="form-input" required>
+                </div>
+                
+                <div id="error-message" class="form-error" style="display: none;"></div>
+                <div id="success-message" style="color: #10b981; margin-bottom: 1rem; display: none;">
+                    Регистрация успешна! Перенаправляем...
+                </div>
+                
+                <button type="submit" class="btn btn-block">Зарегистрироваться</button>
+            </form>
+            
+            <div style="text-align: center; margin-top: 1.5rem;">
+                <p>Уже есть аккаунт? <a href="/login" style="color: #2563eb;">Войти</a></p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const registerForm = document.getElementById('registerForm');
+            const errorMessage = document.getElementById('error-message');
+            const successMessage = document.getElementById('success-message');
+            
+            registerForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const name = document.getElementById('name').value;
+                const email = document.getElementById('email').value;
+                const phone = document.getElementById('phone').value;
+                const password = document.getElementById('password').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                
+                // Валидация
+                if (password !== confirmPassword) {
+                    errorMessage.textContent = 'Пароли не совпадают';
+                    errorMessage.style.display = 'block';
+                    return;
+                }
+                
+                if (password.length < 6) {
+                    errorMessage.textContent = 'Пароль должен быть не менее 6 символов';
+                    errorMessage.style.display = 'block';
+                    return;
+                }
+                
+                // Показываем индикатор загрузки
+                const submitBtn = registerForm.querySelector('button[type="submit"]');
+                const originalText = submitBtn.textContent;
+                submitBtn.textContent = 'Регистрация...';
+                submitBtn.disabled = true;
+                
+                errorMessage.style.display = 'none';
+                
+                try {
+                    console.log('Отправка запроса на регистрацию...');
+                    const response = await fetch('/api/register', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ name, email, password, phone })
+                    });
+                    
+                    console.log('Ответ получен:', response.status);
+                    const data = await response.json();
+                    console.log('Данные ответа:', data);
+                    
+                    if (response.ok) {
+                        successMessage.style.display = 'block';
+                        errorMessage.style.display = 'none';
+                        
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 1500);
+                    } else {
+                        errorMessage.textContent = data.error || 'Ошибка при регистрации';
+                        errorMessage.style.display = 'block';
+                        successMessage.style.display = 'none';
+                    }
+                } catch (error) {
+                    console.error('🔥 Ошибка сети:', error);
+                    errorMessage.textContent = 'Ошибка соединения с сервером';
+                    errorMessage.style.display = 'block';
+                    successMessage.style.display = 'none';
+                } finally {
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marketplace - Главная</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="/" class="logo">Marketplace</a>
+                
+                <div class="nav" id="navContainer">
+                    <!-- Навигация будет обновлена через JavaScript -->
+                    <a href="/" class="nav-link">Главная</a>
+                    <a href="/cart" class="nav-link">
+                        <svg class="icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                  d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                        Корзина
+                        <span class="cart-count" id="cartCount">0</span>
+                    </a>
+                    <a href="/login" class="nav-link auth-link" id="authLink">
+                        <svg class="icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                  d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
+                        </svg>
+                        Войти
+                    </a>
+                    <button class="logout-btn btn btn-secondary" id="logoutBtn" style="display: none;">Выйти</button>
+
+                    <a href="/admin" class="nav-link admin-link" style="display: none;">
+    <svg class="icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+    </svg>
+    Админка
+</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div style="margin: 2rem 0; text-align: center;">
+            <h1>Лучшие товары для вас</h1>
+            <p style="color: #6b7280; margin-top: 0.5rem;" id="welcomeMessage">Найдите то, что вам нужно</p>
+        </div>
+
+        <!-- Фильтры и поиск -->
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                <div style="flex: 1;">
+                    <input type="text" id="searchInput" class="form-input" placeholder="Поиск товаров..." style="width: 100%;">
+                </div>
+                <select id="categoryFilter" class="form-input" style="width: 200px;">
+                    <option value="all">Все категории</option>
+                    <!-- Категории будут загружены через JavaScript -->
+                </select>
+                <select id="sortFilter" class="form-input" style="width: 200px;">
+                    <option value="">Сортировка</option>
+                    <option value="price_asc">По возрастанию цены</option>
+                    <option value="price_desc">По убыванию цены</option>
+                    <option value="rating">По рейтингу</option>
+                </select>
+                <button id="applyFilters" class="btn">Применить</button>
+            </div>
+        </div>
+
+        <div class="products-grid" id="productsContainer">
+            <!-- Товары будут загружены через JavaScript -->
+        </div>
+    </main>
+
+<script src="/js/app.js"></script>
+<script>
+// Главная страница - только загрузка товаров и фильтры
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🏠 Главная страница загружена');
+    
+    // Инициализация фильтров и товаров
+    initProductsPage();
+    
+    // Функция инициализации страницы товаров
+    function initProductsPage() {
+        loadProducts();
+        setupFilters();
+    }
+    
+    // Загрузка товаров
+    async function loadProducts(filters = {}) {
+        try {
+            console.log('📦 Загружаем товары с фильтрами:', filters);
+            
+            let url = '/api/products?';
+            if (filters.search) url += `search=${encodeURIComponent(filters.search)}&`;
+            if (filters.category && filters.category !== 'all') url += `category=${encodeURIComponent(filters.category)}&`;
+            if (filters.sort) url += `sort=${encodeURIComponent(filters.sort)}&`;
+            
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.success) {
+                renderProducts(data.products);
+                renderCategories(data.categories);
+            } else {
+                console.error('Ошибка загрузки товаров:', data.error);
+                showError('Не удалось загрузить товары');
+            }
+        } catch (error) {
+            console.error('Ошибка сети:', error);
+            showError('Ошибка соединения с сервером');
+        }
+    }
+    
+    // Рендеринг товаров
+    function renderProducts(products) {
+        const container = document.getElementById('productsContainer');
+        if (!container) return;
+        
+        if (!products || products.length === 0) {
+            container.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 3rem;">
+                    <h3>Товары не найдены</h3>
+                    <p>Попробуйте изменить параметры поиска</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = products.map(product => `
+            <div class="product-card">
+                <img src="${product.image}" alt="${product.name}" class="product-image">
+                <div class="product-info">
+                    <h3 class="product-title">${product.name}</h3>
+                    <p class="product-price">${product.price.toLocaleString()} ₽</p>
+                    <p class="product-description">${product.description.substring(0, 100)}...</p>
+                    <div class="product-meta">
+                        <div class="product-rating">
+                            <span>★ ${product.rating}</span>
+                            <span style="color: #6b7280; font-size: 0.9rem;">(${product.reviews})</span>
+                        </div>
+                        <span class="stock-badge ${product.stock > 0 ? 'stock-in' : 'stock-out'}">
+                            ${product.stock > 0 ? 'В наличии' : 'Нет в наличии'}
+                        </span>
+                    </div>
+                    <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                        <a href="/product/${product.id}" class="btn btn-secondary" style="flex: 1;">Подробнее</a>
+                        <button class="btn add-to-cart" 
+                                data-product-id="${product.id}" 
+                                data-processing="false"
+                                ${product.stock === 0 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+                            В корзину
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // Рендеринг категорий
+    function renderCategories(categories) {
+        const categoryFilter = document.getElementById('categoryFilter');
+        if (!categoryFilter || !categories) return;
+        
+        // Сохраняем текущее значение
+        const currentValue = categoryFilter.value;
+        
+        // Очищаем старые опции (кроме "Все категории")
+        while (categoryFilter.options.length > 1) {
+            categoryFilter.remove(1);
+        }
+        
+        // Добавляем новые категории
+        categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            categoryFilter.appendChild(option);
+        });
+        
+        // Восстанавливаем выбранное значение если оно есть
+        if (currentValue && categories.includes(currentValue)) {
+            categoryFilter.value = currentValue;
+        }
+    }
+    
+    // Настройка фильтров
+    function setupFilters() {
+        const searchInput = document.getElementById('searchInput');
+        const categoryFilter = document.getElementById('categoryFilter');
+        const sortFilter = document.getElementById('sortFilter');
+        const applyBtn = document.getElementById('applyFilters');
+        
+        if (!applyBtn) return;
+        
+        // Удаляем старый обработчик и создаем новый
+        const newApplyBtn = applyBtn.cloneNode(true);
+        applyBtn.parentNode.replaceChild(newApplyBtn, applyBtn);
+        
+        // Добавляем обработчик
+        newApplyBtn.addEventListener('click', () => {
+            const filters = {
+                search: searchInput ? searchInput.value.trim() : '',
+                category: categoryFilter ? categoryFilter.value : 'all',
+                sort: sortFilter ? sortFilter.value : ''
+            };
+            loadProducts(filters);
+        });
+        
+        // Обработка Enter в поиске
+        if (searchInput) {
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    newApplyBtn.click();
+                }
+            });
+        }
+    }
+    
+    // Показать ошибку
+    function showError(message) {
+        const container = document.getElementById('productsContainer');
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 3rem;">
+                <h3 style="color: #ef4444;">${message}</h3>
+                <button onclick="location.reload()" class="btn" style="margin-top: 1rem;">
+                    Обновить страницу
+                </button>
+            </div>
+        `;
+    }
+    
+    // Обновляем UI при фокусе на вкладке
+    window.addEventListener('focus', () => {
+        if (window.marketplaceApp) {
+            window.marketplaceApp.checkAuth();
+            window.marketplaceApp.updateCartCount();
+        }
+    });
+});
+</script>
+</body>
+</html>

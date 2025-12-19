@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход - Marketplace</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="/" class="logo">Marketplace</a>
+                <div class="nav">
+                    <a href="/" class="nav-link">Главная</a>
+                    <a href="/cart" class="nav-link">Корзина</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="form-container">
+            <h1 class="form-title">Вход в аккаунт</h1>
+            
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label class="form-label" for="email">Email</label>
+                    <input type="email" id="email" name="email" class="form-input" required 
+                           placeholder="user@example.com" value="user@example.com">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="password">Пароль</label>
+                    <input type="password" id="password" name="password" class="form-input" required 
+                           placeholder="password123" value="password123">
+                </div>
+                
+                <div id="error-message" class="form-error" style="display: none;"></div>
+                
+                <button type="submit" class="btn btn-block">Войти</button>
+            </form>
+            
+            <div style="text-align: center; margin-top: 1.5rem;">
+                <p>Нет аккаунта? <a href="/register" style="color: #2563eb;">Зарегистрироваться</a></p>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginForm = document.getElementById('loginForm');
+            const errorMessage = document.getElementById('error-message');
+            
+            loginForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                
+                // Показываем индикатор загрузки
+                const submitBtn = loginForm.querySelector('button[type="submit"]');
+                const originalText = submitBtn.textContent;
+                submitBtn.textContent = 'Вход...';
+                submitBtn.disabled = true;
+                
+                errorMessage.style.display = 'none';
+                
+                try {
+                    console.log('Отправка запроса на логин...');
+                    const response = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ email, password })
+                    });
+                    
+                    console.log('Ответ получен:', response.status);
+                    
+                    const data = await response.json();
+                    console.log('Данные ответа:', data);
+                    
+                    if (response.ok) {
+                        console.log('✅ Логин успешен, редирект...');
+                        window.location.href = '/';
+                    } else {
+                        errorMessage.textContent = data.error || 'Ошибка при входе';
+                        errorMessage.style.display = 'block';
+                    }
+                } catch (error) {
+                    console.error('🔥 Ошибка сети:', error);
+                    errorMessage.textContent = 'Ошибка соединения с сервером';
+                    errorMessage.style.display = 'block';
+                } finally {
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                }
+            });
+            
+            // Для теста можно быстро войти
+            console.log('Для теста используйте:');
+            console.log('Email: user@example.com');
+            console.log('Пароль: password123');
+        });
+    </script>
+</body>
+</html>

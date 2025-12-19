@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мои заказы - Marketplace</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .orders-list {
+            margin: 2rem 0;
+        }
+        
+        .order-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .order-number {
+            font-weight: bold;
+            color: #2563eb;
+        }
+        
+        .order-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .status-processing {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-delivered {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .status-cancelled {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .order-details {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+        
+        .order-total {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-top: 1rem;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="/" class="logo">Marketplace</a>
+                <div class="nav">
+                    <a href="/" class="nav-link">Главная</a>
+                    <a href="/cart" class="nav-link">Корзина</a>
+                    <a href="/profile" class="nav-link">Профиль</a>
+                    <button class="logout-btn btn btn-secondary">Выйти</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <h1 style="margin: 2rem 0;">Мои заказы</h1>
+        
+        <div id="ordersList" class="orders-list">
+            <p>Загрузка заказов...</p>
+        </div>
+        
+        <div style="text-align: center; margin-top: 2rem;">
+            <a href="/" class="btn">Вернуться к покупкам</a>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Проверяем авторизацию
+                const userResponse = await fetch('/api/user');
+                if (userResponse.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+                
+                // Загружаем заказы
+                const ordersResponse = await fetch('/api/orders/my');
+                if (!ordersResponse.ok) {
+                    throw new Error('Ошибка загрузки заказов');
+                }
+                
+                const data = await ordersResponse.json();
+                
+                if (data.orders.length === 0) {
+                    document.getElementById('ordersList').innerHTML = `
+                        <div style="text-align: center; padding: 3rem;">
+                            <h3>У вас пока нет заказов</h3>
+                            <p>Совершите первую покупку!</p>
+                            <a href="/" class="btn" style="margin-top: 1rem;">Перейти к покупкам</a>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Отображаем заказы
+                const ordersHtml = data.orders.map(order => {
+                    const statusClass = `status-${order.status}`;
+                    const statusText = {
+                        'processing': 'В обработке',
+                        'shipped': 'Отправлен',
+                        'delivered': 'Доставлен',
+                        'cancelled': 'Отменен'
+                    }[order.status] || order.status;
+                    
+                    const date = new Date(order.created_at).toLocaleDateString('ru-RU', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                    });
+                    
+                    return `
+                        <div class="order-card">
+                            <div class="order-header">
+                                <div class="order-number">Заказ №${order.order_number}</div>
+                                <div class="order-status ${statusClass}">${statusText}</div>
+                            </div>
+                            <div class="order-details">
+                                <p><strong>Дата:</strong> ${date}</p>
+                                <p><strong>Адрес доставки:</strong> ${order.customer_address}</p>
+                                <p><strong>Телефон:</strong> ${order.customer_phone}</p>
+                                ${order.items_summary ? `<p><strong>Товары:</strong> ${order.items_summary}</p>` : ''}
+                            </div>
+                            <div class="order-total">
+                                Итого: ${parseInt(order.total).toLocaleString()} ₽
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                document.getElementById('ordersList').innerHTML = ordersHtml;
+                
+            } catch (error) {
+                console.error('Ошибка:', error);
+                document.getElementById('ordersList').innerHTML = `
+                    <p style="color: #ef4444; text-align: center;">Ошибка загрузки заказов</p>
+                `;
+            }
+            
+            // Выход из системы
+            document.querySelector('.logout-btn').addEventListener('click', async function() {
+                try {
+                    await fetch('/api/logout', { method: 'POST' });
+                    window.location.href = '/';
+                } catch (error) {
+                    alert('Ошибка при выходе');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
