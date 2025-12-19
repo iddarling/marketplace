@@ -2,18 +2,23 @@ const sqlite3 = require('sqlite3').verbose();
 const { open } = require('sqlite');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
+const path = require('path');
 
 class Database {
   constructor() {
     this.db = null;
+    this.dbPath = process.env.DATABASE_URL || path.join(__dirname, 'database.db');
   }
 
   async init() {
     console.log('🔧 Инициализация базы данных...');
+    console.log(`📁 Путь к БД: ${this.dbPath}`);
+
     
     // Открываем (или создаем) базу данных
+    // Открываем базу данных
     this.db = await open({
-      filename: './database.db',
+      filename: this.dbPath,
       driver: sqlite3.Database
     });
 

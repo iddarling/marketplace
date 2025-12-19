@@ -1,5 +1,5 @@
 {
-  "name": "my-marketplace",
+  "name": "marketplace",
   "version": "1.0.0",
   "description": "Мини-маркетплейс",
   "main": "server.js",
@@ -8,15 +8,18 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "cookie-parser": "^1.4.6",
     "express": "^4.18.2",
-    "express-session": "^1.18.2",
-    "sqlite": "^5.1.1",
-    "sqlite3": "^5.1.7",
-    "uuid": "^9.0.1"
+    "express-session": "^1.17.3",
+    "cookie-parser": "^1.4.6",
+    "bcryptjs": "^2.4.3",
+    "uuid": "^9.0.0",
+    "sqlite3": "^5.1.6",
+    "sqlite": "^5.1.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.11"
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

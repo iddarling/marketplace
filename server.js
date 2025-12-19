@@ -5,32 +5,32 @@ const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
+// Импорт базы данных
 const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Инициализируем базу данных
-db.init().then(() => {
-  console.log('✅ База данных подключена');
-}).catch(err => {
-  console.error('❌ Ошибка подключения к базе данных:', err);
-});
+// Для Railway важно использовать 0.0.0.0
+const HOST = process.env.HOST || '0.0.0.0';
 
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(session({
-  secret: 'marketplace-secret-key-2024',
+  secret: process.env.SESSION_SECRET || 'dev-secret-key-12345',
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    secure: false,
+    secure: process.env.NODE_ENV === 'production',
     maxAge: 24 * 60 * 60 * 1000
   }
 }));
+
+// Статические файлы
 app.use(express.static(path.join(__dirname, 'public')));
+
 
 // Добавьте после настройки сессии и перед другими middleware:
 app.use((req, res, next) => {
@@ -718,7 +718,6 @@ app.get('/api/orders/my', requireAuth, async (req, res) => {
   }
 });
 
-// === Статические маршруты ===
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'index.html'));
 });
@@ -743,19 +742,40 @@ app.get('/profile', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'profile.html'));
 });
 
-app.get('/orders', requireAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'orders.html'));
+app.get('/admin', requireAdmin, (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'admin.html'));
 });
 
-// Запуск сервера
-app.listen(PORT, () => {
-  console.log(`🚀 Сервер запущен на http://localhost:${PORT}`);
-  console.log(`📦 Главная страница: http://localhost:${PORT}`);
-  console.log(`🛒 Корзина: http://localhost:${PORT}/cart`);
-  console.log(`🔐 Логин: http://localhost:${PORT}/login`);
-  console.log(`📝 Регистрация: http://localhost:${PORT}/register`);
-  console.log(`👤 Профиль: http://localhost:${PORT}/profile`);
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Страница не найдена' });
 });
+
+// Error handler
+app.use((err, req, res, next) => {
+  console.error('❌ Ошибка сервера:', err.stack);
+  res.status(500).json({ 
+    error: 'Внутренняя ошибка сервера',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+// Инициализация базы данных и запуск сервера
+db.init().then(() => {
+  app.listen(PORT, HOST, () => {
+    console.log(`✅ Сервер запущен на http://${HOST}:${PORT}`);
+    console.log(`🌐 Режим: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`📦 API: http://${HOST}:${PORT}/api/products`);
+    console.log(`🛒 Корзина: http://${HOST}:${PORT}/cart`);
+    console.log(`🔐 Логин: http://${HOST}:${PORT}/login`);
+    console.log(`👑 Админка: http://${HOST}:${PORT}/admin`);
+  });
+}).catch(err => {
+  console.error('❌ Не удалось запустить сервер:', err);
+  process.exit(1);
+});
+
+module.exports = app;
 
 
 // В server.js добавьте:
