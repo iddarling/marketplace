@@ -293,15 +293,6 @@
             </div>
         </div>
     </header>
-    <div id="logsTab" class="tab-content" style="display: none;">
-  <div style="margin-bottom: 1rem; display: flex; gap: 1rem;">
-    <button class="btn" id="refreshLogs">Обновить</button>
-    <button class="btn btn-danger" id="clearLogs">Очистить логи</button>
-  </div>
-    <div style="background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 8px; font-family: monospace; max-height: 500px; overflow-y: auto;">
-    <pre id="logsContent">Загрузка логов...</pre>
-  </div>
-</div>
     <main class="admin-container">
         <div class="admin-header">
             <h1>Админ-панель</h1>
@@ -340,7 +331,18 @@
                     </table>
                 </div>
             </div>
-            
+            <div id="logsTab" class="tab-content" style="display: none;">
+    <div class="table-container">
+        <h3>Системные логи</h3>
+        <div style="margin-bottom: 1rem; display: flex; gap: 1rem;">
+            <button class="btn" id="refreshLogs">Обновить</button>
+            <button class="btn btn-danger" id="clearLogs">Очистить логи</button>
+        </div>
+        <div style="background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 8px; font-family: monospace; max-height: 500px; overflow-y: auto;">
+            <pre id="logsContent">Загрузка логов...</pre>
+        </div>
+    </div>
+</div>
             <!-- Товары -->
             <div id="productsTab" class="tab-content" style="display: none;">
                 <div style="margin-bottom: 1rem; text-align: right;">
@@ -614,6 +616,74 @@ class AdminPanel {
         this.init();
     }
     
+
+    // В классе AdminPanel добавьте:
+async loadLogs() {
+  try {
+    const response = await fetch('/api/admin/logs');
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success) {
+        this.renderLogs(data.logs);
+      }
+    }
+  } catch (error) {
+    console.error('Ошибка загрузки логов:', error);
+  }
+}
+
+renderLogs(logs) {
+  const logsContent = document.getElementById('logsContent');
+  if (!logsContent) return;
+  
+  if (!logs || logs.length === 0) {
+    logsContent.textContent = 'Логи отсутствуют';
+    return;
+  }
+  
+  logsContent.innerHTML = logs.map(log => {
+    // Добавляем цветовое кодирование
+    let coloredLog = log;
+    if (log.includes('❌')) coloredLog = `<span style="color: #ff6b6b">${log}</span>`;
+    else if (log.includes('⚠️')) coloredLog = `<span style="color: #ffd93d">${log}</span>`;
+    else if (log.includes('✅')) coloredLog = `<span style="color: #6bcf7f">${log}</span>`;
+    else if (log.includes('📥')) coloredLog = `<span style="color: #4dabf7">${log}</span>`;
+    else if (log.includes('📤')) coloredLog = `<span style="color: #9775fa">${log}</span>`;
+    else if (log.includes('ℹ️')) coloredLog = `<span style="color: #adb5bd">${log}</span>`;
+    
+    return coloredLog;
+  }).join('<br>');
+}
+
+
+
+const clearLogsBtn = document.getElementById('clearLogs');
+if (clearLogsBtn) {
+  clearLogsBtn.addEventListener('click', async () => {
+    if (confirm('Вы уверены, что хотите очистить все логи?')) {
+      try {
+        const response = await fetch('/api/admin/logs', {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          this.showNotification('Логи очищены', 'success');
+          this.loadLogs();
+        }
+      } catch (error) {
+        this.showNotification('Ошибка очистки логов', 'error');
+      }
+    }
+  });
+}
+
+// В switchToTab добавьте:
+case 'logs':
+  console.log('📋 Загружаем логи...');
+  this.loadLogs();
+  break;
+
+
     async init() {
     console.log('🚀 Инициализация AdminPanel...');
     
@@ -646,37 +716,7 @@ class AdminPanel {
     }
 }
     
-    setupSpecifications() {
-    console.log('⚙️ Настраиваем характеристики...');
-    
-    try {
-        // Обработчик для добавления характеристик в форме редактирования
-        const addSpecBtn = document.getElementById('addSpecBtn');
-        if (addSpecBtn) {
-            addSpecBtn.addEventListener('click', () => {
-                this.addSpecificationField('', '');
-            });
-        } else {
-            console.warn('⚠️ Кнопка добавления характеристики (редактирование) не найдена');
-        }
-        
-        // Обработчик для добавления характеристик в форме добавления
-        const addSpecBtnAdd = document.getElementById('addSpecBtnAdd');
-        if (addSpecBtnAdd) {
-            addSpecBtnAdd.addEventListener('click', () => {
-                this.addSpecificationField('', '', 'addSpecificationsContainer');
-            });
-        } else {
-            console.warn('⚠️ Кнопка добавления характеристики (добавление) не найдена');
-        }
-        
-        console.log('✅ Характеристики настроены');
-    } catch (error) {
-        console.error('❌ Ошибка настройки характеристик:', error);
-    }
-}
-
-    async checkAdminAccess() {
+async checkAdminAccess() {
         try {
             const response = await fetch('/api/user');
             if (response.ok) {
@@ -1219,7 +1259,13 @@ async addProduct(productData) {
     if (resetBtn) {
         resetBtn.addEventListener('click', this.handleResetForm.bind(this));
     }
-    
+    // В setupEventListeners добавьте:
+const refreshLogsBtn = document.getElementById('refreshLogs');
+if (refreshLogsBtn) {
+  refreshLogsBtn.addEventListener('click', () => {
+    this.loadLogs();
+  });
+}
     console.log('✅ Обработчики событий настроены');
 }
 
@@ -1440,8 +1486,6 @@ handleResetForm = () => {
  switchToTab(tabId) {
     console.log(`🔄 Переключаемся на вкладку: ${tabId}`);
     
-    const tabs = document.querySelectorAll('.admin-tab');
-    const tabContents = document.querySelectorAll('.tab-content');
     
     // Убираем активный класс у всех вкладок
     tabs.forEach(t => t.classList.remove('active'));
@@ -1477,15 +1521,21 @@ handleResetForm = () => {
                 console.log('➕ Показываем форму добавления товара');
                 // Форма добавления уже загружена
                 break;
+             case 'logs':
+                console.log('📋 Загружаем логи...');
+                this.loadLogs();
+                break;
         }
     } else {
         console.log(`⚠️ Контент вкладки с id="${tabId}Tab" не найден`);
     }
+   
+
+
     
-    console.log('✅ Переключение на вкладку завершено');
 }
     
-    setupSpecifications() {
+    setupSpecificationsListeners() {
         // Обработчик для добавления характеристик в форме редактирования
         document.getElementById('addSpecBtn')?.addEventListener('click', () => {
             this.addSpecificationField('', '');
@@ -1637,13 +1687,7 @@ function fillTestProductData() {
 // Глобальные функции для модальных окон
        
        
-        function openModal(modalId) {
-            document.getElementById(modalId).classList.add('active');
-        }
-        
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('active');
-        }
+    
         
         // Инициализация админ-панели
         document.addEventListener('DOMContentLoaded', () => {

@@ -13,7 +13,7 @@ const app = express();
 
 // Для Railway важно использовать 0.0.0.0
 const HOST = process.env.HOST || '0.0.0.0';
-
+const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -70,7 +70,7 @@ const requireAdmin = async (req, res, next) => {
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 };
-
+app.use(requestLogger);
 // === API для админ-панели ===
 
 // Получить всех пользователей (только для админа)
@@ -762,21 +762,30 @@ app.use((err, req, res, next) => {
 
 // Инициализация базы данных и запуск сервера
 db.init().then(() => {
-  app.listen(PORT, HOST, () => {
-    console.log(`✅ Сервер запущен на http://${HOST}:${PORT}`);
-    console.log(`🌐 Режим: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`📦 API: http://${HOST}:${PORT}/api/products`);
-    console.log(`🛒 Корзина: http://${HOST}:${PORT}/cart`);
-    console.log(`🔐 Логин: http://${HOST}:${PORT}/login`);
-    console.log(`👑 Админка: http://${HOST}:${PORT}/admin`);
-  });
+    app.listen(PORT, HOST, () => {
+        console.log(`✅ Сервер запущен на http://${HOST}:${PORT}`);
+        console.log(`🌐 Режим: ${process.env.NODE_ENV || 'development'}`);
+        console.log(`🏥 Health check: http://${HOST}:${PORT}/health`);
+        console.log(`📦 API: http://${HOST}:${PORT}/api/products`);
+        console.log(`🛒 Корзина: http://${HOST}:${PORT}/cart`);
+        console.log(`🔐 Логин: http://${HOST}:${PORT}/login`);
+        console.log(`👑 Админка: http://${HOST}:${PORT}/admin`);
+        console.log(`📊 Мониторинг: http://${HOST}:${PORT}/ping`);
+    });
 }).catch(err => {
-  console.error('❌ Не удалось запустить сервер:', err);
-  process.exit(1);
+    console.error('❌ Не удалось запустить сервер:', err);
+    process.exit(1);
 });
 
 module.exports = app;
-
+// Добавьте CORS для Railway
+const cors = require('cors');
+app.use(cors({
+    origin: process.env.NODE_ENV === 'production'
+        ? ['https://your-app-name.railway.app'] // Замените на ваш домен
+        : 'http://localhost:3000',
+    credentials: true
+}));
 
 // В server.js добавьте:
 app.get('/api/debug/users', async (req, res) => {
@@ -1081,7 +1090,7 @@ app.delete('/api/admin/products/:id', requireAdmin, async (req, res) => {
 });
 // Получаем порт из переменных окружения Railway
 // Получаем порт из переменных окружения Railway
-const PORT = process.env.PORT || 3000;
+
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Сервер запущен на порту ${PORT}`);
@@ -1108,7 +1117,6 @@ const path = require('path');
 app.get('/api/admin/logs', requireAdmin, async (req, res) => {
   try {
     const logFile = path.join(__dirname, 'logs', 'app.log');
-    
     if (!fs.existsSync(logFile)) {
       return res.json({
         success: false,
@@ -1116,13 +1124,11 @@ app.get('/api/admin/logs', requireAdmin, async (req, res) => {
         logs: []
       });
     }
-    
     const logs = fs.readFileSync(logFile, 'utf8')
       .split('\n')
       .filter(line => line.trim())
       .reverse() // Последние логи первыми
       .slice(0, 100); // Последние 100 строк
-    
     res.json({
       success: true,
       logs: logs
@@ -1137,12 +1143,10 @@ app.get('/api/admin/logs', requireAdmin, async (req, res) => {
 app.delete('/api/admin/logs', requireAdmin, async (req, res) => {
   try {
     const logFile = path.join(__dirname, 'logs', 'app.log');
-    
     if (fs.existsSync(logFile)) {
       fs.writeFileSync(logFile, '');
       logger.log('Логи очищены администратором');
     }
-    
     res.json({
       success: true,
       message: 'Логи очищены'
@@ -1151,4 +1155,87 @@ app.delete('/api/admin/logs', requireAdmin, async (req, res) => {
     logger.error('Ошибка очистки логов', error);
     res.status(500).json({ error: 'Ошибка очистки логов' });
   }
+});
+
+
+// request-logger.js
+const logger = require('./logger');
+const requestLogger = require('./request-logger');
+
+// Добавьте после других middleware
+
+function requestLogger(req, res, next) {
+  const start = Date.now();
+  // Логируем входящий запрос
+  logger.log(`📥 ${req.method} ${req.originalUrl}`, {
+    ip: req.ip,
+    userAgent: req.get('User-Agent'),
+    query: req.query,
+    body: req.method !== 'GET' ? req.body : undefined
+  });
+  // Перехватываем ответ
+  const originalSend = res.send;
+  res.send = function(body) {
+    const duration = Date.now() - start;
+    // Логируем ответ
+    logger.log(`📤 ${req.method} ${req.originalUrl} - ${res.statusCode} (${duration}ms)`, {
+      status: res.statusCode,
+      duration: duration + 'ms',
+      responseSize: body?.length || 0
+    });
+    return originalSend.call(this, body);
+  };
+  next();
+}
+
+module.exports = requestLogger;
+
+
+// ОБЯЗАТЕЛЬНО: Health check для Railway
+app.get('/health', (req, res) => {
+    const healthcheck = {
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        service: 'Marketplace API',
+        version: '1.0.0',
+        checks: {
+            database: 'checking',
+            api: 'ok'
+        }
+    };
+    try {
+        // Проверяем подключение к базе данных
+        if (db.db) {
+            healthcheck.checks.database = 'connected';
+        }
+
+        res.status(200).json(healthcheck);
+        console.log('✅ Health check пройден:', new Date().toISOString());
+    } catch (error) {
+        healthcheck.status = 'unhealthy';
+        healthcheck.checks.database = 'error';
+        res.status(503).json(healthcheck);
+        console.error('❌ Health check не пройден:', error);
+    }
+});
+
+// Простой ping для проверки
+app.get('/ping', (req, res) => {
+    res.json({status: 'pong',timestamp: new Date().toISOString(),server: 'Marketplace API'});});
+// Корневой маршрут
+app.get('/', (req, res) => {
+    res.json({
+        message: 'Marketplace API',
+        version: '1.0.0',
+        endpoints: {
+            products: '/api/products',
+            cart: '/api/cart',
+            orders: '/api/orders',
+            admin: '/api/admin/',
+            health: '/health',
+            ping: '/ping'
+        },
+        documentation: 'Добавьте сюда ссылку на документацию'
+    });
 });

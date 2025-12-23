@@ -3,7 +3,7 @@ const { open } = require('sqlite');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
-
+const logger = require('./logger');
 class Database {
   constructor() {
     this.db = null;
@@ -13,7 +13,6 @@ class Database {
   async init() {
     console.log('🔧 Инициализация базы данных...');
     console.log(`📁 Путь к БД: ${this.dbPath}`);
-
     
     // Открываем (или создаем) базу данных
     // Открываем базу данных
@@ -34,6 +33,18 @@ class Database {
     console.log('✅ База данных готова');
     return this.db;
   }
+async init() {
+  logger.log('🔧 Инициализация базы данных...');
+  try {
+    await this.createTables();
+    logger.success('✅ Таблицы созданы');
+    await this.seedData();
+    logger.success('✅ Тестовые данные добавлены');
+  } catch (error) {
+    logger.error('❌ Ошибка инициализации БД', error);
+    throw error;
+  }
+}
 
   async createTables() {
     console.log('📋 Создание таблиц...');
