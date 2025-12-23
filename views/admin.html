@@ -287,12 +287,21 @@
                         </svg>
                         <span id="userName">Профиль</span>
                     </a>
+                    <button class="admin-tab" data-tab="logs">Логи</button>
                     <button class="logout-btn btn btn-secondary">Выйти</button>
                 </div>
             </div>
         </div>
     </header>
-
+    <div id="logsTab" class="tab-content" style="display: none;">
+  <div style="margin-bottom: 1rem; display: flex; gap: 1rem;">
+    <button class="btn" id="refreshLogs">Обновить</button>
+    <button class="btn btn-danger" id="clearLogs">Очистить логи</button>
+  </div>
+    <div style="background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 8px; font-family: monospace; max-height: 500px; overflow-y: auto;">
+    <pre id="logsContent">Загрузка логов...</pre>
+  </div>
+</div>
     <main class="admin-container">
         <div class="admin-header">
             <h1>Админ-панель</h1>

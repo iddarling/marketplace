@@ -1087,3 +1087,68 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Сервер запущен на порту ${PORT}`);
   console.log(`🌐 Доступен по: http://0.0.0.0:${PORT}`);
 });
+
+const logger = require('./logger');
+
+// Замените все console.log на logger.log
+console.log('Сервер запущен...'); // ❌ Старое
+logger.log('Сервер запущен...'); // ✅ Новое
+
+// Примеры использования:
+logger.log('Запрос на /api/products', { query: req.query });
+logger.error('Ошибка базы данных', error);
+logger.success('Пользователь зарегистрирован', { userId: user.id });
+logger.warn('Мало товара на складе', { productId, stock });
+
+
+const fs = require('fs');
+const path = require('path');
+
+// Эндпоинт для просмотра логов (только для админа)
+app.get('/api/admin/logs', requireAdmin, async (req, res) => {
+  try {
+    const logFile = path.join(__dirname, 'logs', 'app.log');
+    
+    if (!fs.existsSync(logFile)) {
+      return res.json({
+        success: false,
+        message: 'Файл логов не найден',
+        logs: []
+      });
+    }
+    
+    const logs = fs.readFileSync(logFile, 'utf8')
+      .split('\n')
+      .filter(line => line.trim())
+      .reverse() // Последние логи первыми
+      .slice(0, 100); // Последние 100 строк
+    
+    res.json({
+      success: true,
+      logs: logs
+    });
+  } catch (error) {
+    logger.error('Ошибка чтения логов', error);
+    res.status(500).json({ error: 'Ошибка чтения логов' });
+  }
+});
+
+// Эндпоинт для очистки логов (только для админа)
+app.delete('/api/admin/logs', requireAdmin, async (req, res) => {
+  try {
+    const logFile = path.join(__dirname, 'logs', 'app.log');
+    
+    if (fs.existsSync(logFile)) {
+      fs.writeFileSync(logFile, '');
+      logger.log('Логи очищены администратором');
+    }
+    
+    res.json({
+      success: true,
+      message: 'Логи очищены'
+    });
+  } catch (error) {
+    logger.error('Ошибка очистки логов', error);
+    res.status(500).json({ error: 'Ошибка очистки логов' });
+  }
+});
