@@ -9,7 +9,7 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('./db');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+
 
 // Для Railway важно использовать 0.0.0.0
 const HOST = process.env.HOST || '0.0.0.0';
@@ -19,7 +19,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'dev-secret-key-12345',
+  secret: process.env.SESSION_SECRET || '44ba179362efcb8dc7a778f82615cedea58909725432b37206021a0c6b3f9790b96103d6263ce6e8ccaeffbce0d07bc6662484c887ad35ab6750cf60f721bfdf',
   resave: false,
   saveUninitialized: false,
   cookie: { 
@@ -1078,4 +1078,12 @@ app.delete('/api/admin/products/:id', requireAdmin, async (req, res) => {
         console.error('❌ Ошибка удаления товара:', error);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
+});
+// Получаем порт из переменных окружения Railway
+// Получаем порт из переменных окружения Railway
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Сервер запущен на порту ${PORT}`);
+  console.log(`🌐 Доступен по: http://0.0.0.0:${PORT}`);
 });
